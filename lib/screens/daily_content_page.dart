@@ -21,47 +21,36 @@ class _DailyContentPageState extends State<DailyContentPage> {
   final ArticleService _articleService = ArticleService();
   bool _isLoading = true;
   String _articleContent = '';
+  List<String> _paragraphs = [];
+  List<String> _images = [];
+  Map<String, dynamic> _questionData = {};
   List<RelatedArticle> _relatedArticles = [];
   String _errorMessage = '';
   bool _isLiked = false;
-  List<String> _paragraphs = [];
 
   @override
   void initState() {
     super.initState();
-    _loadArticleData();
+    _loadContent();
   }
 
-  Future<void> _loadArticleData() async {
+  Future<void> _loadContent() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
     try {
-      // For article types (category '1'), load the full content
+      // For article types (category '1')
       if (widget.item.category == '1') {
-        final content = await _articleService.fetchArticleContent(
-          widget.item.contentId,
-        );
-        final relatedArticles = await _articleService.fetchRelatedArticles(
-          widget.item.contentId,
-        );
-
-        // Parse HTML content to extract paragraphs
-        final document = html_parser.parse(content);
-        final paragraphs = document.querySelectorAll('p');
-        final extractedParagraphs =
-            paragraphs.map((element) => element.text).toList();
-
-        setState(() {
-          _articleContent = content;
-          _paragraphs = extractedParagraphs;
-          _relatedArticles = relatedArticles;
-          _isLoading = false;
-        });
-      } else {
-        // For other content types, we'll just use the content available in the item
+        await _loadArticleData();
+      }
+      // For question types (category '3')
+      else if (widget.item.category == '3') {
+        await _loadQuestionData();
+      }
+      // For other content types, we'll just use the content available in the item
+      else {
         setState(() {
           _isLoading = false;
         });
@@ -70,6 +59,62 @@ class _DailyContentPageState extends State<DailyContentPage> {
       setState(() {
         _isLoading = false;
         _errorMessage = 'Error loading content: $e';
+      });
+    }
+  }
+
+  Future<void> _loadArticleData() async {
+    try {
+      final content = await _articleService.fetchArticleContent(
+        widget.item.contentId,
+      );
+      final relatedArticles = await _articleService.fetchRelatedArticles(
+        widget.item.contentId,
+        '1',
+      );
+
+      // Extract paragraphs from HTML content
+      final paragraphs = _articleService.extractParagraphs(content);
+
+      setState(() {
+        _articleContent = content;
+        _paragraphs = paragraphs;
+        _relatedArticles = relatedArticles;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error loading article: $e';
+      });
+    }
+  }
+
+  Future<void> _loadQuestionData() async {
+    try {
+      final questionData = await _articleService.fetchQuestionContent(
+        widget.item.contentId,
+      );
+      final relatedArticles = await _articleService.fetchRelatedArticles(
+        widget.item.contentId,
+        '3',
+      );
+
+      // Extract images from HTML content
+      final images = _articleService.extractImages(
+        questionData['html_content'],
+      );
+
+      setState(() {
+        _questionData = questionData;
+        _images = images;
+        _relatedArticles = relatedArticles;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error loading question: $e';
       });
     }
   }
@@ -294,7 +339,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Simplified article content - just display paragraphs as Text widgets
+                // Simplified article content - display paragraphs as Text widgets
                 if (_paragraphs.isNotEmpty)
                   ..._paragraphs
                       .map(
@@ -382,48 +427,14 @@ class _DailyContentPageState extends State<DailyContentPage> {
     );
   }
 
-  Widget _buildRelatedArticleItem(RelatedArticle article) {
-    return InkWell(
-      onTap: () {
-        // Here we would navigate to the article detail page
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Opening: ${article.title}')));
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    article.title,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  if (article.authorList.isNotEmpty)
-                    Text(
-                      '文 / ${article.getAuthorsText()}',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildQuestionContent() {
+    final authorData =
+        _questionData.isNotEmpty ? _questionData['author'] : null;
+    final authorName =
+        authorData != null
+            ? authorData['user_name']
+            : widget.item.author.userName;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,7 +450,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
               ),
             ),
 
-          // Question
+          // Question and answer
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -450,79 +461,136 @@ class _DailyContentPageState extends State<DailyContentPage> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  widget.item.forward,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    widget.item.forward,
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  ),
                 ),
                 const SizedBox(height: 24),
 
-                // Answer placeholder
+                // Divider with dot
+                Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        '•',
+                        style: TextStyle(fontSize: 24, color: Colors.grey),
+                      ),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Answer
+                Text(
+                  '$authorName答：',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+
+                // Display images from the question content
+                if (_images.isNotEmpty)
+                  ..._images
+                      .map(
+                        (imageSrc) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Image.network(
+                            imageSrc,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 200,
+                                color: Colors.grey[200],
+                                child: Center(
+                                  child: Text('Image not available'),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      )
+                      .toList(),
+
+                const SizedBox(height: 24),
+
+                // Author info
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        widget.item.forward,
-                        style: TextStyle(fontSize: 16, height: 1.6),
+                      CircleAvatar(
+                        backgroundImage:
+                            authorData != null
+                                ? NetworkImage(authorData['web_url'])
+                                : NetworkImage(widget.item.author.webUrl),
+                        onBackgroundImageError: (e, s) => {},
+                        backgroundColor: Colors.grey[300],
                       ),
-                      const SizedBox(height: 16),
-                      if (widget.item.author.userId !=
-                          '0') // Check if there's an author
-                        Row(
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CircleAvatar(
-                              backgroundImage: NetworkImage(
-                                widget.item.author.webUrl,
-                              ),
-                              onBackgroundImageError: (e, s) => {},
-                              backgroundColor: Colors.grey[300],
+                            Text(
+                              authorData != null
+                                  ? authorData['user_name']
+                                  : widget.item.author.userName,
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.item.author.userName,
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  widget.item.author.summary,
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              authorData != null
+                                  ? authorData['summary']
+                                  : widget.item.author.summary,
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('已关注作者')),
+                          );
+                        },
+                        child: const Text('关注'),
+                      ),
                     ],
                   ),
                 ),
+
+                // Related questions
+                if (_relatedArticles.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  Text(
+                    '相关推荐',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ..._relatedArticles.map(
+                    (article) =>
+                        _buildRelatedArticleItem(article, isQuestion: true),
+                  ),
+                ],
               ],
             ),
           ),
-
-          // Image if available
-          if (widget.item.imgUrl.isNotEmpty)
-            Image.network(
-              widget.item.imgUrl,
-              height: 200,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 200,
-                  color: Colors.grey[300],
-                  child: const Center(child: Text('Image not available')),
-                );
-              },
-            ),
         ],
       ),
     );
@@ -669,6 +737,60 @@ class _DailyContentPageState extends State<DailyContentPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRelatedArticleItem(
+    RelatedArticle article, {
+    bool isQuestion = false,
+  }) {
+    return InkWell(
+      onTap: () {
+        // Here we would navigate to the article detail page
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Opening: ${article.title}')));
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 50,
+              child: Center(
+                child: Text(
+                  isQuestion ? '问答' : '阅读',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    article.title,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  if (article.authorList.isNotEmpty)
+                    Text(
+                      '文 / ${article.getAuthorsText()}',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
