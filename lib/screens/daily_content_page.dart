@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import '../models/one_response.dart';
 import '../services/article_service.dart';
+import '../widgets/audio_player_widget.dart';
 
 class DailyContentPage extends StatefulWidget {
   final ContentItem item;
@@ -24,6 +25,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
   List<String> _paragraphs = [];
   List<String> _images = [];
   Map<String, dynamic> _questionData = {};
+  Map<String, dynamic> _radioData = {};
   List<RelatedArticle> _relatedArticles = [];
   String _errorMessage = '';
   bool _isLiked = false;
@@ -48,6 +50,10 @@ class _DailyContentPageState extends State<DailyContentPage> {
       // For question types (category '3')
       else if (widget.item.category == '3') {
         await _loadQuestionData();
+      }
+      // For radio types (category '8')
+      else if (widget.item.category == '8') {
+        await _loadRadioData();
       }
       // For other content types, we'll just use the content available in the item
       else {
@@ -115,6 +121,35 @@ class _DailyContentPageState extends State<DailyContentPage> {
       setState(() {
         _isLoading = false;
         _errorMessage = 'Error loading question: $e';
+      });
+    }
+  }
+
+  Future<void> _loadRadioData() async {
+    try {
+      final radioData = await _articleService.fetchRadioContent(
+        widget.item.contentId,
+      );
+      final relatedArticles = await _articleService.fetchRelatedArticles(
+        widget.item.contentId,
+        '8',
+      );
+
+      // Extract paragraphs from HTML content for description
+      final paragraphs = _articleService.extractParagraphs(
+        radioData['html_content'],
+      );
+
+      setState(() {
+        _radioData = radioData;
+        _paragraphs = paragraphs;
+        _relatedArticles = relatedArticles;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error loading radio: $e';
       });
     }
   }
@@ -597,6 +632,10 @@ class _DailyContentPageState extends State<DailyContentPage> {
   }
 
   Widget _buildRadioContent() {
+    final audioUrl = _radioData.isNotEmpty ? _radioData['audio_url'] : '';
+    final anchor = _radioData.isNotEmpty ? _radioData['anchor'] : '';
+    final authorData = _radioData.isNotEmpty ? _radioData['author'] : null;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,70 +673,23 @@ class _DailyContentPageState extends State<DailyContentPage> {
                 const SizedBox(height: 16),
 
                 // Audio player
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
+                if (audioUrl.isNotEmpty)
+                  AudioPlayerWidget(
+                    audioUrl: audioUrl,
+                    title: widget.item.title,
+                    subtitle: anchor.isNotEmpty ? '主播: $anchor' : '',
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text('暂无音频', style: TextStyle(color: Colors.grey)),
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      // Progress bar
-                      Container(
-                        height: 4,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: FractionallySizedBox(
-                          widthFactor: 0.0, // 0.0 to 1.0 for progress
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Controls
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.skip_previous),
-                            onPressed: () {},
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.play_circle_filled),
-                            iconSize: 48,
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('播放功能暂未开放')),
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.skip_next),
-                            onPressed: () {},
-                          ),
-                        ],
-                      ),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('00:00', style: TextStyle(color: Colors.grey)),
-                          Text('00:00', style: TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
 
                 const SizedBox(height: 24),
 
@@ -705,7 +697,10 @@ class _DailyContentPageState extends State<DailyContentPage> {
                 Row(
                   children: [
                     CircleAvatar(
-                      backgroundImage: NetworkImage(widget.item.author.webUrl),
+                      backgroundImage:
+                          authorData != null
+                              ? NetworkImage(authorData['web_url'])
+                              : NetworkImage(widget.item.author.webUrl),
                       onBackgroundImageError: (e, s) => {},
                       backgroundColor: Colors.grey[300],
                     ),
@@ -714,11 +709,15 @@ class _DailyContentPageState extends State<DailyContentPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.item.author.userName,
+                          authorData != null
+                              ? authorData['user_name']
+                              : widget.item.author.userName,
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          widget.item.author.summary,
+                          authorData != null
+                              ? authorData['summary']
+                              : widget.item.author.summary,
                           style: TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                       ],
@@ -729,10 +728,37 @@ class _DailyContentPageState extends State<DailyContentPage> {
                 const SizedBox(height: 24),
 
                 // Description
-                Text(
-                  widget.item.forward,
-                  style: TextStyle(fontSize: 16, height: 1.6),
-                ),
+                if (_paragraphs.isNotEmpty)
+                  ..._paragraphs
+                      .map(
+                        (paragraph) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Text(
+                            paragraph,
+                            style: TextStyle(fontSize: 16, height: 1.6),
+                          ),
+                        ),
+                      )
+                      .toList()
+                else
+                  Text(
+                    widget.item.forward,
+                    style: TextStyle(fontSize: 16, height: 1.6),
+                  ),
+
+                // Related articles
+                if (_relatedArticles.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  Text(
+                    '相关推荐',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ..._relatedArticles.map(
+                    (article) =>
+                        _buildRelatedArticleItem(article, isRadio: true),
+                  ),
+                ],
               ],
             ),
           ),
@@ -744,10 +770,15 @@ class _DailyContentPageState extends State<DailyContentPage> {
   Widget _buildRelatedArticleItem(
     RelatedArticle article, {
     bool isQuestion = false,
+    bool isRadio = false,
   }) {
+    String contentType = '阅读'; // Default to article
+    if (isQuestion) contentType = '问答';
+    if (isRadio) contentType = '电台';
+
     return InkWell(
       onTap: () {
-        // Here we would navigate to the article detail page
+        // Here we would navigate to the content detail page
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Opening: ${article.title}')));
@@ -764,7 +795,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
               width: 50,
               child: Center(
                 child: Text(
-                  isQuestion ? '问答' : '阅读',
+                  contentType,
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ),

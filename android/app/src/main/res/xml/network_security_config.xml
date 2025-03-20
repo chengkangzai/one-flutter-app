@@ -1,0 +1,13 @@
+<network-security-config>
+    <!-- By default, block cleartext traffic for security -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Allow cleartext (HTTP) traffic specifically for the wufazhuce.com domain and its subdomains -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">wufazhuce.com</domain>
+    </domain-config>
+</network-security-config>

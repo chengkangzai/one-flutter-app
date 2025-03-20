@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 
 class ArticleService {
+  // Use HTTP as the API seems to only support HTTP
   final String baseUrl = 'http://v3.wufazhuce.com:8000/api';
   
   // Headers from your curl command
@@ -15,12 +16,24 @@ class ArticleService {
     'Connection': 'keep-alive',
   };
 
+  // Get request with error handling
+  Future<http.Response> _safeGet(String endpoint) async {
+    try {
+      final url = '$baseUrl/$endpoint';
+      final response = await http.get(Uri.parse(url), headers: headers);
+      return response;
+    } catch (e) {
+      print('HTTP request failed: $e');
+      throw Exception('Network error: $e');
+    }
+  }
+
   // Fetch article content by ID
   Future<String> fetchArticleContent(String contentId) async {
-    final url = '$baseUrl/essay/htmlcontent/$contentId';
+    final endpoint = 'essay/htmlcontent/$contentId';
     
     try {
-      final response = await http.get(Uri.parse(url), headers: headers);
+      final response = await _safeGet(endpoint);
       
       if (response.statusCode == 200) {
         final decodedData = json.decode(response.body);
@@ -42,10 +55,10 @@ class ArticleService {
 
   // Fetch question content by ID
   Future<Map<String, dynamic>> fetchQuestionContent(String contentId) async {
-    final url = '$baseUrl/question/htmlcontent/$contentId';
+    final endpoint = 'question/htmlcontent/$contentId';
     
     try {
-      final response = await http.get(Uri.parse(url), headers: headers);
+      final response = await _safeGet(endpoint);
       
       if (response.statusCode == 200) {
         final decodedData = json.decode(response.body);
@@ -63,6 +76,37 @@ class ArticleService {
       }
     } catch (e) {
       print('Error fetching question content: $e');
+      throw Exception('Network error: $e');
+    }
+  }
+
+  // Fetch radio content by ID
+  Future<Map<String, dynamic>> fetchRadioContent(String contentId) async {
+    final endpoint = 'radio/htmlcontent/$contentId';
+    
+    try {
+      final response = await _safeGet(endpoint);
+      
+      if (response.statusCode == 200) {
+        final decodedData = json.decode(response.body);
+        
+        if (decodedData['res'] == 0 && decodedData['data'] != null) {
+          String audioUrl = decodedData['data']['audio'] ?? '';
+          
+          return {
+            'audio_url': audioUrl,
+            'anchor': decodedData['data']['anchor'] ?? '',
+            'html_content': decodedData['data']['html_content'],
+            'author': decodedData['data']['author_list'][0],
+          };
+        } else {
+          throw Exception('Failed to parse radio content');
+        }
+      } else {
+        throw Exception('Failed to load radio content: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching radio content: $e');
       throw Exception('Network error: $e');
     }
   }
@@ -93,7 +137,10 @@ class ArticleService {
       
       if (contentDiv != null) {
         final images = contentDiv.querySelectorAll('img');
-        return images.map((element) => element.attributes['src'] ?? '').where((src) => src.isNotEmpty).toList();
+        return images
+            .map((element) => element.attributes['src'] ?? '')
+            .where((src) => src.isNotEmpty)
+            .toList();
       } else {
         return [];
       }
@@ -105,10 +152,26 @@ class ArticleService {
 
   // Fetch related articles
   Future<List<RelatedArticle>> fetchRelatedArticles(String contentId, String contentType) async {
-    final url = '$baseUrl/relatedforwebview/${contentType == '1' ? 'essay' : 'question'}/$contentId';
+    String endpoint;
+    
+    switch(contentType) {
+      case '1':
+        endpoint = 'essay';
+        break;
+      case '3':
+        endpoint = 'question';
+        break;
+      case '8':
+        endpoint = 'radio';
+        break;
+      default:
+        endpoint = 'essay';
+    }
+    
+    final url = 'relatedforwebview/$endpoint/$contentId';
     
     try {
-      final response = await http.get(Uri.parse(url), headers: headers);
+      final response = await _safeGet(url);
       
       if (response.statusCode == 200) {
         final decodedData = json.decode(response.body);
