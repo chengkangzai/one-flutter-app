@@ -1,39 +1,122 @@
 // lib/screens/daily_content_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/content_item.dart';
+import 'package:flutter_application_1/models/related_article.dart';
+import 'package:html/parser.dart' as html_parser;
+import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
+import '../models/one_response.dart';
+import '../services/article_service.dart';
 
-class DailyContentPage extends StatelessWidget {
+class DailyContentPage extends StatefulWidget {
   final ContentItem item;
 
   const DailyContentPage({Key? key, required this.item}) : super(key: key);
 
   @override
+  State<DailyContentPage> createState() => _DailyContentPageState();
+}
+
+class _DailyContentPageState extends State<DailyContentPage> {
+  final ArticleService _articleService = ArticleService();
+  bool _isLoading = true;
+  String _articleContent = '';
+  List<RelatedArticle> _relatedArticles = [];
+  String _errorMessage = '';
+  bool _isLiked = false;
+  List<String> _paragraphs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArticleData();
+  }
+
+  Future<void> _loadArticleData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      // For article types (category '1'), load the full content
+      if (widget.item.category == '1') {
+        final content = await _articleService.fetchArticleContent(
+          widget.item.contentId,
+        );
+        final relatedArticles = await _articleService.fetchRelatedArticles(
+          widget.item.contentId,
+        );
+
+        // Parse HTML content to extract paragraphs
+        final document = html_parser.parse(content);
+        final paragraphs = document.querySelectorAll('p');
+        final extractedParagraphs =
+            paragraphs.map((element) => element.text).toList();
+
+        setState(() {
+          _articleContent = content;
+          _paragraphs = extractedParagraphs;
+          _relatedArticles = relatedArticles;
+          _isLoading = false;
+        });
+      } else {
+        // For other content types, we'll just use the content available in the item
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error loading content: $e';
+      });
+    }
+  }
+
+  void _shareContent() {
+    final String shareText =
+        '${widget.item.title}\n'
+        '${widget.item.author.userName != '' ? '作者: ${widget.item.author.userName}\n' : ''}'
+        '${widget.item.forward}\n'
+        '来自: ONE一个';
+
+    Share.share(shareText);
+  }
+
+  void _toggleLike() {
+    setState(() {
+      _isLiked = !_isLiked;
+    });
+
+    // Here you would normally call an API to like/unlike the content
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isLiked ? '已点赞' : '已取消点赞'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(item.title),
+        title: Text(widget.item.title),
         centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              // Implement share functionality
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Share functionality')),
-              );
-            },
-          ),
+          IconButton(icon: const Icon(Icons.share), onPressed: _shareContent),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [_buildContent()],
-        ),
-      ),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _errorMessage.isNotEmpty
+              ? Center(child: Text(_errorMessage))
+              : _buildContent(),
       bottomNavigationBar: BottomAppBar(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -42,14 +125,39 @@ class DailyContentPage extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.favorite_border),
-                  const SizedBox(width: 4),
-                  Text('${item.likeCount}'),
+                  IconButton(
+                    icon: Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? Colors.red : Colors.grey,
+                    ),
+                    onPressed: _toggleLike,
+                  ),
+                  Text(
+                    '${widget.item.likeCount}',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ],
               ),
-              const Icon(Icons.bookmark_border),
-              const Icon(Icons.comment_outlined),
-              const Icon(Icons.share),
+              IconButton(
+                icon: const Icon(Icons.bookmark_border, color: Colors.grey),
+                onPressed: () {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('已加入收藏')));
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.comment_outlined, color: Colors.grey),
+                onPressed: () {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('评论功能暂未开放')));
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.share, color: Colors.grey),
+                onPressed: _shareContent,
+              ),
             ],
           ),
         ),
@@ -59,24 +167,24 @@ class DailyContentPage extends StatelessWidget {
 
   Widget _buildContent() {
     // Daily illustration
-    if (item.category == '0') {
+    if (widget.item.category == '0') {
       return _buildDailyContent();
     }
     // Article
-    else if (item.category == '1') {
+    else if (widget.item.category == '1') {
       return _buildArticleContent();
     }
     // Question
-    else if (item.category == '3') {
+    else if (widget.item.category == '3') {
       return _buildQuestionContent();
     }
     // Radio
-    else if (item.category == '8') {
+    else if (widget.item.category == '8') {
       return _buildRadioContent();
     }
     // Default
     else {
-      return Padding(
+      return SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Text(
           'Content not available for this type',
@@ -87,344 +195,481 @@ class DailyContentPage extends StatelessWidget {
   }
 
   Widget _buildDailyContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Image
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Image.network(
-            item.imgUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: Colors.grey[300],
-                child: const Center(child: Text('Image not available')),
-              );
-            },
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Image.network(
+              widget.item.imgUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: const Center(child: Text('Image not available')),
+                );
+              },
+            ),
           ),
-        ),
 
-        // Attribution and quote
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                '插画 | ${item.picInfo}',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                item.forward,
-                style: TextStyle(fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              if (item.textAuthorInfo != null) ...[
+          // Attribution and quote
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
                 Text(
-                  '— ${item.textAuthorInfo!.textAuthorName}',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item.textAuthorInfo!.textAuthorWork,
+                  '插画 | ${widget.item.picInfo}',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  item.textAuthorInfo!.textAuthorDesc,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  widget.item.forward,
+                  style: TextStyle(fontSize: 18),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 16),
+                if (widget.item.textAuthorInfo != null) ...[
+                  Text(
+                    '— ${widget.item.textAuthorInfo!.textAuthorName}',
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.item.textAuthorInfo!.textAuthorWork,
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    widget.item.textAuthorInfo!.textAuthorDesc,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildArticleContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.title,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '文 / ${item.author.userName}',
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              Text(item.forward, style: TextStyle(fontSize: 16, height: 1.6)),
-              const SizedBox(height: 16),
-              // This would be where the full article content would go
-              Text(
-                '(This is a placeholder for the full article content, which would be fetched from a separate API call with the article ID: ${item.contentId})',
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              // Author info
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.item.imgUrl.isNotEmpty)
+            Image.network(
+              widget.item.imgUrl,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 200,
+                  color: Colors.grey[300],
+                  child: const Center(child: Text('Image not available')),
+                );
+              },
+            ),
+
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.item.title,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: NetworkImage(item.author.webUrl),
-                      onBackgroundImageError: (e, s) => {},
-                      backgroundColor: Colors.grey[300],
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.author.userName,
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                const SizedBox(height: 8),
+                Text(
+                  '文 / ${widget.item.author.userName}',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+
+                // Simplified article content - just display paragraphs as Text widgets
+                if (_paragraphs.isNotEmpty)
+                  ..._paragraphs
+                      .map(
+                        (paragraph) => Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Text(
+                            paragraph,
+                            style: TextStyle(fontSize: 16, height: 1.6),
                           ),
-                          Text(
-                            item.author.summary,
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-                        ],
+                        ),
+                      )
+                      .toList()
+                else
+                  Text(
+                    widget.item.forward,
+                    style: TextStyle(fontSize: 16, height: 1.6),
+                  ),
+
+                const SizedBox(height: 24),
+
+                // Author info
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: NetworkImage(
+                          widget.item.author.webUrl,
+                        ),
+                        onBackgroundImageError: (e, s) => {},
+                        backgroundColor: Colors.grey[300],
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        // Follow author functionality
-                      },
-                      child: const Text('关注'),
-                    ),
-                  ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.item.author.userName,
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              widget.item.author.summary,
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('已关注作者')),
+                          );
+                        },
+                        child: const Text('关注'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Related articles
+                if (_relatedArticles.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  Text(
+                    '相关推荐',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ..._relatedArticles.map(
+                    (article) => _buildRelatedArticleItem(article),
+                  ),
+                ],
+              ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRelatedArticleItem(RelatedArticle article) {
+    return InkWell(
+      onTap: () {
+        // Here we would navigate to the article detail page
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Opening: ${article.title}')));
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
         ),
-      ],
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    article.title,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  if (article.authorList.isNotEmpty)
+                    Text(
+                      '文 / ${article.getAuthorsText()}',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildQuestionContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Tag if available
-        if (item.tagList.isNotEmpty)
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Tag if available
+          if (widget.item.tagList.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text(
+                '— ${widget.item.tagList.first.title} —',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+          // Question
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Text(
-              '— ${item.tagList.first.title} —',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-              textAlign: TextAlign.center,
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.item.title,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.item.forward,
+                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                ),
+                const SizedBox(height: 24),
+
+                // Answer placeholder
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.item.forward,
+                        style: TextStyle(fontSize: 16, height: 1.6),
+                      ),
+                      const SizedBox(height: 16),
+                      if (widget.item.author.userId !=
+                          '0') // Check if there's an author
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundImage: NetworkImage(
+                                widget.item.author.webUrl,
+                              ),
+                              onBackgroundImageError: (e, s) => {},
+                              backgroundColor: Colors.grey[300],
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.item.author.userName,
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  widget.item.author.summary,
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
 
-        // Question
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.title,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                item.forward,
-                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-              ),
-              const SizedBox(height: 24),
-
-              // Answer placeholder
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '(This is a placeholder for the answer content, which would be fetched from a separate API call)',
-                      style: TextStyle(fontSize: 16, height: 1.6),
-                    ),
-                    const SizedBox(height: 16),
-                    if (item.author.userId != '0') // Check if there's an author
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage: NetworkImage(item.author.webUrl),
-                            onBackgroundImageError: (e, s) => {},
-                            backgroundColor: Colors.grey[300],
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.author.userName,
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                item.author.summary,
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Image if available
-        if (item.imgUrl.isNotEmpty)
-          Image.network(
-            item.imgUrl,
-            height: 200,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 200,
-                color: Colors.grey[300],
-                child: const Center(child: Text('Image not available')),
-              );
-            },
-          ),
-      ],
+          // Image if available
+          if (widget.item.imgUrl.isNotEmpty)
+            Image.network(
+              widget.item.imgUrl,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 200,
+                  color: Colors.grey[300],
+                  child: const Center(child: Text('Image not available')),
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 
   Widget _buildRadioContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Image if available
-        if (item.imgUrl.isNotEmpty)
-          Image.network(
-            item.imgUrl,
-            height: 200,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 200,
-                color: Colors.grey[300],
-                child: const Center(child: Text('Image not available')),
-              );
-            },
-          ),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image if available
+          if (widget.item.imgUrl.isNotEmpty)
+            Image.network(
+              widget.item.imgUrl,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  height: 200,
+                  color: Colors.grey[300],
+                  child: const Center(child: Text('Image not available')),
+                );
+              },
+            ),
 
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.title,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'ONE收音机 | ${item.volume}',
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-
-              // Audio player placeholder
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.item.title,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.skip_previous),
-                      onPressed: () {},
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.play_circle_filled),
-                      iconSize: 48,
-                      onPressed: () {},
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.skip_next),
-                      onPressed: () {},
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                Text(
+                  'ONE收音机 | ${widget.item.volume}',
+                  style: TextStyle(color: Colors.grey),
                 ),
-              ),
+                const SizedBox(height: 16),
 
-              const SizedBox(height: 24),
-
-              // Host info
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(item.author.webUrl),
-                    onBackgroundImageError: (e, s) => {},
-                    backgroundColor: Colors.grey[300],
+                // Audio player
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Column(
                     children: [
-                      Text(
-                        item.author.userName,
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      // Progress bar
+                      Container(
+                        height: 4,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: FractionallySizedBox(
+                          widthFactor: 0.0, // 0.0 to 1.0 for progress
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
                       ),
-                      Text(
-                        item.author.summary,
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      const SizedBox(height: 16),
+
+                      // Controls
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.skip_previous),
+                            onPressed: () {},
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.play_circle_filled),
+                            iconSize: 48,
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('播放功能暂未开放')),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.skip_next),
+                            onPressed: () {},
+                          ),
+                        ],
+                      ),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('00:00', style: TextStyle(color: Colors.grey)),
+                          Text('00:00', style: TextStyle(color: Colors.grey)),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Description placeholder
-              Text(
-                '(This is a placeholder for the full radio transcript or description, which would be fetched from a separate API call with the radio ID: ${item.contentId})',
-                style: TextStyle(fontSize: 16, height: 1.6),
-              ),
-            ],
+                // Host info
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundImage: NetworkImage(widget.item.author.webUrl),
+                      onBackgroundImageError: (e, s) => {},
+                      backgroundColor: Colors.grey[300],
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.item.author.userName,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          widget.item.author.summary,
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Description
+                Text(
+                  widget.item.forward,
+                  style: TextStyle(fontSize: 16, height: 1.6),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
