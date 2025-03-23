@@ -17,14 +17,15 @@ class RelatedArticle {
 
   factory RelatedArticle.fromJson(Map<String, dynamic> json) {
     final List<dynamic> authorListJson = json['author_list'] ?? [];
-    final authorList = authorListJson.map((author) => Author.fromJson(author)).toList();
-    
+    final authorList =
+        authorListJson.map((author) => Author.fromJson(author)).toList();
+
     return RelatedArticle(
       contentId: json['content_id'].toString(),
       authorList: authorList,
       category: json['category'] ?? 0,
       title: json['title'] ?? '',
-      cover: json['cover'] ?? '',
+      cover: json['cover'] ?? json['home_image'] ?? '',
     );
   }
 

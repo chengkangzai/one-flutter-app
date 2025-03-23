@@ -1,5 +1,6 @@
 // lib/screens/daily_content_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/models/author.dart';
 import 'package:flutter_application_1/models/content_item.dart';
 import 'package:flutter_application_1/models/related_article.dart';
 import 'package:flutter_application_1/services/audio_service.dart';
@@ -266,7 +267,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
     // Default
     else {
       return SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0), 
+        padding: const EdgeInsets.all(16.0),
         child: Text(
           'Content not available for this type',
           style: TextStyle(fontSize: 16),
@@ -348,17 +349,20 @@ class _DailyContentPageState extends State<DailyContentPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (widget.item.imgUrl.isNotEmpty)
-            Image.network(
-              widget.item.imgUrl,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 200,
-                  color: Colors.grey[300],
-                  child: const Center(child: Text('Image not available')),
-                );
-              },
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                widget.item.imgUrl,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: Colors.grey[300],
+                    child: const Center(child: Text('Image not available')),
+                  );
+                },
+              ),
             ),
 
           Padding(
@@ -474,7 +478,6 @@ class _DailyContentPageState extends State<DailyContentPage> {
             : widget.item.author.userName;
 
     return SingleChildScrollView(
-      
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -780,12 +783,77 @@ class _DailyContentPageState extends State<DailyContentPage> {
     if (isQuestion) contentType = '问答';
     if (isRadio) contentType = '电台';
 
+    // Function to convert RelatedArticle to ContentItem
+    ContentItem relatedToContentItem(RelatedArticle article) {
+      // Create an Author instance from the first author in the list (if available)
+      Author author =
+          article.authorList.isNotEmpty
+              ? article.authorList.first
+              : Author(
+                userId: '',
+                userName: article.getAuthorsText(),
+                desc: '',
+                wbName: '',
+                isSettled: '',
+                settledType: '',
+                summary: '',
+                fansTotal: '',
+                webUrl: '',
+              );
+
+      // Convert the category to string
+      String categoryStr = article.category.toString();
+
+      // Fix the image URL
+      String imageUrl = article.cover;
+
+      // If the URL doesn't start with http, add it
+      if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+        imageUrl = 'http://' + imageUrl;
+      }
+
+      // Create a basic ContentItem from the related article data
+      return ContentItem(
+        id: article.contentId,
+        category: categoryStr,
+        displayCategory: article.category,
+        itemId: article.contentId,
+        title: article.title,
+        forward: '', // No forward text available in RelatedArticle
+        imgUrl: imageUrl,
+        likeCount: 0, // No like count available in RelatedArticle
+        postDate: '',
+        lastUpdateDate: '',
+        author: author,
+        contentId: article.contentId,
+        contentType: categoryStr,
+        shareUrl: '',
+        shareInfo: {},
+        tagList: [],
+        volume: '',
+        picInfo: '',
+        wordsInfo: '',
+        textAuthorInfo: null,
+      );
+    }
+
     return InkWell(
       onTap: () {
-        // Here we would navigate to the content detail page
-        ScaffoldMessenger.of(
+        // Create a ContentItem from the RelatedArticle
+        final contentItem = relatedToContentItem(article);
+
+        // Add debug print to see what's happening when clicked
+        print('Navigating to related article: ${article.title}');
+        print('ContentId: ${article.contentId}, Category: ${article.category}');
+        print('Image URL being used: ${contentItem.imgUrl}');
+
+        // Navigate to the article detail page
+        Navigator.push(
           context,
-        ).showSnackBar(SnackBar(content: Text('Opening: ${article.title}')));
+          MaterialPageRoute(
+            builder: (context) => DailyContentPage(item: contentItem),
+          ),
+        );
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
