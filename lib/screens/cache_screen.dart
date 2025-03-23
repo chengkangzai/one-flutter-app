@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_application_1/providers/theme_provider.dart';
 import 'package:flutter_application_1/services/cache_manager.dart';
+import 'package:provider/provider.dart';
 
 class CacheSettingsScreen extends StatefulWidget {
   const CacheSettingsScreen({Key? key}) : super(key: key);
@@ -117,6 +119,9 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Cache Settings')),
       body:
@@ -146,7 +151,10 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                             const SizedBox(height: 16),
                             LinearProgressIndicator(
                               value: _currentCacheSizeMB / _maxCacheSizeMB,
-                              backgroundColor: Colors.grey[200],
+                              backgroundColor:
+                                  isDarkMode
+                                      ? Colors.grey[800]
+                                      : Colors.grey[200],
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 _currentCacheSizeMB > _maxCacheSizeMB * 0.9
                                     ? Colors.red
@@ -166,7 +174,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                                         : _currentCacheSizeMB >
                                             _maxCacheSizeMB * 0.7
                                         ? Colors.orange
-                                        : Colors.black,
+                                        : null,
                               ),
                             ),
                             const SizedBox(height: 16),

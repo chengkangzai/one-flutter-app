@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/content_item.dart';
 import 'package:flutter_application_1/providers/cache_provider.dart';
+import 'package:flutter_application_1/providers/theme_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/one_response.dart';
@@ -65,14 +66,21 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('ONE一个'),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(
+              isDarkMode ? Icons.dark_mode : Icons.light_mode,
+              color: Theme.of(context).appBarTheme.foregroundColor,
+            ),
+            onPressed: () => themeProvider.toggleTheme(),
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
@@ -80,12 +88,14 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon:
                 _isRefreshing
-                    ? const SizedBox(
+                    ? SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).appBarTheme.foregroundColor!,
+                        ),
                       ),
                     )
                     : const Icon(Icons.refresh),
@@ -132,7 +142,7 @@ class _HomePageState extends State<HomePage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.grey[200],
+                            color: isDarkMode ? Colors.black26 : Colors.grey[200],
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(_errorDetails),
@@ -258,9 +268,6 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
         ],
         currentIndex: 0,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         onTap: (index) {
           if (index == 3) {
@@ -307,6 +314,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDailyItem(ContentItem item) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -383,6 +393,8 @@ class _HomePageState extends State<HomePage> {
     // Check if we're in offline mode
     final cacheProvider = Provider.of<CacheProvider>(context, listen: false);
     final isOfflineMode = cacheProvider.offlineModeEnabled;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     return Image.network(
       url,
@@ -394,7 +406,7 @@ class _HomePageState extends State<HomePage> {
         print('Image loading error: $error for URL: $url');
         return Container(
           height: height,
-          color: Colors.grey[300],
+          color: isDarkMode ? Colors.grey[900] : Colors.grey[300],
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

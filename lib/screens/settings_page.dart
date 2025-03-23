@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/providers/cache_provider.dart';
+import 'package:flutter_application_1/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -8,11 +9,31 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cacheProvider = Provider.of<CacheProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
+          // Theme settings section
+          ListTile(
+            title: const Text('Theme Settings'),
+            subtitle: Text(
+              themeProvider.isDarkMode ? 'Dark mode' : 'Light mode',
+            ),
+            leading: Icon(
+              themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+            ),
+            trailing: Switch(
+              value: themeProvider.isDarkMode,
+              onChanged: (value) {
+                themeProvider.setDarkMode(value);
+              },
+            ),
+          ),
+
+          const Divider(),
+
           // Cache settings section
           ListTile(
             title: const Text('Cache Settings'),
