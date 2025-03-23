@@ -1,3 +1,4 @@
+// lib/screens/settings_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/providers/cache_provider.dart';
 import 'package:flutter_application_1/providers/theme_provider.dart';
@@ -12,15 +13,13 @@ class SettingsPage extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
           // Theme settings section
           ListTile(
-            title: const Text('Theme Settings'),
-            subtitle: Text(
-              themeProvider.isDarkMode ? 'Dark mode' : 'Light mode',
-            ),
+            title: const Text('主题设置'),
+            subtitle: Text(themeProvider.isDarkMode ? '深色模式' : '浅色模式'),
             leading: Icon(
               themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
             ),
@@ -36,13 +35,13 @@ class SettingsPage extends StatelessWidget {
 
           // Cache settings section
           ListTile(
-            title: const Text('Cache Settings'),
+            title: const Text('缓存设置'),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
                 Text(
-                  'Current usage: ${cacheProvider.currentCacheSizeMB.toStringAsFixed(2)} MB',
+                  '当前用量: ${cacheProvider.currentCacheSizeMB.toStringAsFixed(2)} MB',
                   style: TextStyle(
                     color:
                         cacheProvider.currentCacheSizeMB >
@@ -52,11 +51,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  cacheProvider.offlineModeEnabled
-                      ? 'Offline mode enabled'
-                      : 'Offline mode disabled',
-                ),
+                Text(cacheProvider.offlineModeEnabled ? '离线模式已启用' : '离线模式已禁用'),
               ],
             ),
             leading: const Icon(Icons.storage),
@@ -70,8 +65,8 @@ class SettingsPage extends StatelessWidget {
 
           // About section
           ListTile(
-            title: const Text('About'),
-            subtitle: const Text('ONE一个 App Version 1.0.0'),
+            title: const Text('关于'),
+            subtitle: const Text('ONE一个 App 版本 1.0.0'),
             leading: const Icon(Icons.info_outline),
             onTap: () {
               showAboutDialog(
@@ -81,9 +76,7 @@ class SettingsPage extends StatelessWidget {
                 applicationLegalese: '© 2025 ONE一个',
                 children: [
                   const SizedBox(height: 16),
-                  const Text(
-                    'A Flutter application for ONE一个, bringing you daily content including articles, photos, and audio.',
-                  ),
+                  const Text('ONE一个是一款提供每日文章、照片和音频内容的应用程序。'),
                 ],
               );
             },

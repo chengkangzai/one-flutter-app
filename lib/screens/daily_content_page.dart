@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/content_item.dart';
 import 'package:flutter_application_1/models/related_article.dart';
+import 'package:flutter_application_1/providers/favorites_provider.dart';
 import 'package:flutter_application_1/providers/theme_provider.dart';
 import 'package:flutter_application_1/services/audio_service.dart';
 import 'package:provider/provider.dart';
@@ -180,10 +181,29 @@ class _DailyContentPageState extends State<DailyContentPage> {
     );
   }
 
+  void _toggleFavorite(BuildContext context, ContentItem item) {
+    final favoritesProvider = Provider.of<FavoritesProvider>(
+      context,
+      listen: false,
+    );
+    final isFavorite = favoritesProvider.isFavorite(item.contentId);
+
+    favoritesProvider.toggleFavorite(item);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isFavorite ? '已移除收藏' : '已加入收藏'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
+    final favoritesProvider = Provider.of<FavoritesProvider>(context);
+    final isFavorite = favoritesProvider.isFavorite(widget.item.contentId);
 
     return Scaffold(
       appBar: AppBar(
@@ -221,12 +241,11 @@ class _DailyContentPageState extends State<DailyContentPage> {
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.bookmark_border, color: Colors.grey),
-                onPressed: () {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('已加入收藏')));
-                },
+                icon: Icon(
+                  isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                  color: isFavorite ? Colors.blue : Colors.grey,
+                ),
+                onPressed: () => _toggleFavorite(context, widget.item),
               ),
               IconButton(
                 icon: const Icon(Icons.comment_outlined, color: Colors.grey),
@@ -278,7 +297,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
 
   Widget _buildDailyContent() {
     return SingleChildScrollView(
-      padding: EdgeInsets.only(bottom: 32),
+      padding: const EdgeInsets.only(bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -308,31 +327,31 @@ class _DailyContentPageState extends State<DailyContentPage> {
               children: [
                 Text(
                   '插画 | ${widget.item.picInfo}',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
                 Text(
                   widget.item.forward,
-                  style: TextStyle(fontSize: 18),
+                  style: const TextStyle(fontSize: 18),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
                 if (widget.item.textAuthorInfo != null) ...[
                   Text(
-                    '— ${widget.item.textAuthorInfo!.textAuthorName}',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                    '— ${widget.item.textAuthorInfo?.textAuthorName ?? ""}',
+                    style: const TextStyle(color: Colors.grey, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    widget.item.textAuthorInfo!.textAuthorWork,
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    widget.item.textAuthorInfo?.textAuthorWork ?? "",
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    widget.item.textAuthorInfo!.textAuthorDesc,
+                    widget.item.textAuthorInfo?.textAuthorDesc ?? "",
                     style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     textAlign: TextAlign.center,
                   ),

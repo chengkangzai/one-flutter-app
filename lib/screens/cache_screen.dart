@@ -62,7 +62,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
 
       scaffold.showSnackBar(
         const SnackBar(
-          content: Text('Settings saved successfully'),
+          content: Text('设置已成功保存'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -79,7 +79,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
       print('Error saving cache settings: $e');
       scaffold.showSnackBar(
         SnackBar(
-          content: Text('Error saving settings: $e'),
+          content: Text('保存设置时出错: $e'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
@@ -95,7 +95,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
 
       scaffold.showSnackBar(
         const SnackBar(
-          content: Text('Cache cleared successfully'),
+          content: Text('缓存已成功清除'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -109,7 +109,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
       print('Error clearing cache: $e');
       scaffold.showSnackBar(
         SnackBar(
-          content: Text('Error clearing cache: $e'),
+          content: Text('清除缓存时出错: $e'),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
@@ -123,7 +123,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
     final isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cache Settings')),
+      appBar: AppBar(title: const Text('缓存设置')),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -142,7 +142,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Cache Usage',
+                              '缓存使用情况',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -186,7 +186,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                                   backgroundColor: Colors.red,
                                   foregroundColor: Colors.white,
                                 ),
-                                child: const Text('Clear All Cache'),
+                                child: const Text('清除所有缓存'),
                               ),
                             ),
                           ],
@@ -204,7 +204,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Cache Settings',
+                              '缓存设置',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -213,7 +213,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                             const SizedBox(height: 16),
 
                             // Cache expiration hours
-                            const Text('Cache Expiration (hours)'),
+                            const Text('缓存过期时间（小时）'),
                             TextField(
                               controller: TextEditingController(
                                 text: _cacheExpirationHours.toString(),
@@ -230,14 +230,14 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                                 }
                               },
                               decoration: const InputDecoration(
-                                hintText: 'Enter hours',
-                                suffixText: 'hours',
+                                hintText: '输入小时数',
+                                suffixText: '小时',
                               ),
                             ),
                             const SizedBox(height: 16),
 
                             // Max cache size
-                            const Text('Maximum Cache Size (MB)'),
+                            const Text('最大缓存大小（MB）'),
                             TextField(
                               controller: TextEditingController(
                                 text: _maxCacheSizeMB.toString(),
@@ -254,7 +254,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                                 }
                               },
                               decoration: const InputDecoration(
-                                hintText: 'Enter size in MB',
+                                hintText: '输入大小（MB）',
                                 suffixText: 'MB',
                               ),
                             ),
@@ -262,10 +262,8 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
 
                             // Offline mode toggle
                             SwitchListTile(
-                              title: const Text('Offline Mode'),
-                              subtitle: const Text(
-                                'Automatically cache content for offline viewing',
-                              ),
+                              title: const Text('离线模式'),
+                              subtitle: const Text('自动缓存内容以便离线查看'),
                               value: _offlineModeEnabled,
                               onChanged: (value) {
                                 setState(() {
@@ -283,7 +281,7 @@ class _CacheSettingsScreenState extends State<CacheSettingsScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _saveSettings,
-                        child: const Text('Save Settings'),
+                        child: const Text('保存设置'),
                       ),
                     ),
                   ],

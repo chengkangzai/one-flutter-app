@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/providers/cache_provider.dart';
+import 'package:flutter_application_1/providers/favorites_provider.dart';
 import 'package:flutter_application_1/providers/theme_provider.dart';
 import 'package:flutter_application_1/screens/cache_screen.dart';
+import 'package:flutter_application_1/screens/favorites_page.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_page.dart';
 import 'screens/settings_page.dart';
@@ -12,6 +14,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => CacheProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => FavoritesProvider()),
       ],
       child: const MyApp(),
     ),
@@ -68,6 +71,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomePage(),
         '/settings': (context) => const SettingsPage(),
         '/settings/cache': (context) => const CacheSettingsScreen(),
+        '/favorites': (context) => const FavoritesPage(),
       },
       initialRoute: '/',
       debugShowCheckedModeBanner: false,

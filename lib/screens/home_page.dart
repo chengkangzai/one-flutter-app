@@ -1,7 +1,10 @@
+// lib/screens/home_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/content_item.dart';
 import 'package:flutter_application_1/providers/cache_provider.dart';
+import 'package:flutter_application_1/providers/favorites_provider.dart';
 import 'package:flutter_application_1/providers/theme_provider.dart';
+import 'package:flutter_application_1/screens/favorites_page.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/one_response.dart';
@@ -20,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   late Future<OneResponse> _oneResponseFuture;
   String _errorDetails = '';
   bool _isRefreshing = false;
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -68,235 +72,282 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ONE一个'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(
-              isDarkMode ? Icons.dark_mode : Icons.light_mode,
-              color: Theme.of(context).appBarTheme.foregroundColor,
-            ),
-            onPressed: () => themeProvider.toggleTheme(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
-          ),
-          IconButton(
-            icon:
-                _isRefreshing
-                    ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).appBarTheme.foregroundColor!,
-                        ),
-                      ),
-                    )
-                    : const Icon(Icons.refresh),
-            onPressed:
-                _isRefreshing ? null : () => _fetchData(forceRefresh: true),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => _fetchData(forceRefresh: true),
-        child: FutureBuilder<OneResponse>(
-          future: _oneResponseFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !_isRefreshing) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              // Check if we're offline and show appropriate message
-              final cacheProvider = Provider.of<CacheProvider>(
-                context,
-                listen: false,
-              );
-              final isOfflineMode = cacheProvider.offlineModeEnabled;
-
-              return Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        isOfflineMode
-                            ? 'No cached data available'
-                            : 'Error loading data',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('${snapshot.error}'),
-                      if (_errorDetails.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDarkMode ? Colors.black26 : Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(_errorDetails),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      if (isOfflineMode) ...[
-                        const Text(
-                          'You are in offline mode. To fetch new data, '
-                          'disable offline mode in settings or try again when connected.',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      ElevatedButton(
-                        onPressed: () => _fetchData(forceRefresh: true),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            } else if (snapshot.hasData) {
-              final data = snapshot.data!.data;
-
-              // Format the date for display
-              final dateStr = data.date;
-              DateTime dateTime = DateTime.now();
-              try {
-                dateTime = DateTime.parse(dateStr);
-              } catch (e) {
-                // Use current date if parsing fails
-                print('Date parsing error: $e for date: $dateStr');
-              }
-
-              final day = dateTime.day.toString();
-              final month = DateFormat('MMM').format(dateTime);
-              final year = dateTime.year.toString();
-
-              return Column(
-                children: [
-                  // Date display with network/cache indicator
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Text(
-                          day,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(month, style: const TextStyle(fontSize: 12)),
-                            Text(year, style: const TextStyle(fontSize: 12)),
-                          ],
-                        ),
-                        const Spacer(),
-                        // Cache status indicator
-                        Consumer<CacheProvider>(
-                          builder: (context, cacheProvider, child) {
-                            return Row(
-                              children: [
-                                Icon(
-                                  cacheProvider.offlineModeEnabled
-                                      ? Icons.offline_pin
-                                      : Icons.cloud_done,
-                                  size: 16,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 4),
-                                // Weather info
-                                Text(
-                                  '${data.weather.cityName} ${data.weather.temperature}°C',
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Content list
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: data.contentList.length,
-                      itemBuilder: (context, index) {
-                        final item = data.contentList[index];
-                        return InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => DailyContentPage(item: item),
-                              ),
-                            );
-                          },
-                          child: _buildContentListItem(item),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              );
-            } else {
-              return const Center(child: Text('No data available'));
-            }
-          },
-        ),
-      ),
+      appBar: _currentIndex == 0 ? _buildHomeAppBar(isDarkMode) : null,
+      body: _getBodyForIndex(_currentIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
           BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: '发现'),
-          BottomNavigationBarItem(icon: Icon(Icons.collections), label: '收藏夹'),
+          BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: '收藏夹'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
         ],
-        currentIndex: 0,
+        currentIndex: _currentIndex,
         type: BottomNavigationBarType.fixed,
         onTap: (index) {
           if (index == 3) {
             // "My" tab
             Navigator.pushNamed(context, '/settings');
+          } else {
+            setState(() {
+              _currentIndex = index;
+            });
           }
         },
       ),
     );
   }
 
+  AppBar _buildHomeAppBar(bool isDarkMode) {
+    return AppBar(
+      title: const Text('ONE一个'),
+      centerTitle: true,
+      actions: [
+        IconButton(
+          icon: Icon(
+            isDarkMode ? Icons.dark_mode : Icons.light_mode,
+            color: Theme.of(context).appBarTheme.foregroundColor,
+          ),
+          onPressed:
+              () =>
+                  Provider.of<ThemeProvider>(
+                    context,
+                    listen: false,
+                  ).toggleTheme(),
+        ),
+        IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: () => Navigator.pushNamed(context, '/settings'),
+        ),
+        IconButton(
+          icon:
+              _isRefreshing
+                  ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).appBarTheme.foregroundColor!,
+                      ),
+                    ),
+                  )
+                  : const Icon(Icons.refresh),
+          onPressed:
+              _isRefreshing ? null : () => _fetchData(forceRefresh: true),
+        ),
+      ],
+    );
+  }
+
+  Widget _getBodyForIndex(int index) {
+    switch (index) {
+      case 0:
+        return _buildHomeContent();
+      case 1:
+        return _buildDiscoveryContent();
+      case 2:
+        return const FavoritesPage();
+      default:
+        return _buildHomeContent();
+    }
+  }
+
+  Widget _buildHomeContent() {
+    return RefreshIndicator(
+      onRefresh: () => _fetchData(forceRefresh: true),
+      child: FutureBuilder<OneResponse>(
+        future: _oneResponseFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !_isRefreshing) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            // Check if we're offline and show appropriate message
+            final cacheProvider = Provider.of<CacheProvider>(
+              context,
+              listen: false,
+            );
+            final isOfflineMode = cacheProvider.offlineModeEnabled;
+
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      isOfflineMode ? '没有可用的缓存数据' : '加载数据时出错',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('${snapshot.error}'),
+                    if (_errorDetails.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              Provider.of<ThemeProvider>(context).isDarkMode
+                                  ? Colors.black26
+                                  : Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(_errorDetails),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    if (isOfflineMode) ...[
+                      const Text(
+                        '您处于离线模式。要获取新数据，请禁用设置中的离线模式或在连接时重试。',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    ElevatedButton(
+                      onPressed: () => _fetchData(forceRefresh: true),
+                      child: const Text('重试'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          } else if (snapshot.hasData) {
+            final data = snapshot.data!.data;
+
+            // Format the date for display
+            final dateStr = data.date;
+            DateTime dateTime = DateTime.now();
+            try {
+              dateTime = DateTime.parse(dateStr);
+            } catch (e) {
+              // Use current date if parsing fails
+              print('Date parsing error: $e for date: $dateStr');
+            }
+
+            final day = dateTime.day.toString();
+            final month = DateFormat('MMM').format(dateTime);
+            final year = dateTime.year.toString();
+
+            return Column(
+              children: [
+                // Date display with network/cache indicator
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Text(
+                        day,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(month, style: const TextStyle(fontSize: 12)),
+                          Text(year, style: const TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                      const Spacer(),
+                      // Cache status indicator
+                      Consumer<CacheProvider>(
+                        builder: (context, cacheProvider, child) {
+                          return Row(
+                            children: [
+                              Icon(
+                                cacheProvider.offlineModeEnabled
+                                    ? Icons.offline_pin
+                                    : Icons.cloud_done,
+                                size: 16,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 4),
+                              // Weather info
+                              Text(
+                                '${data.weather.cityName} ${data.weather.temperature}°C',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content list
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: data.contentList.length,
+                    itemBuilder: (context, index) {
+                      final item = data.contentList[index];
+                      return InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => DailyContentPage(item: item),
+                            ),
+                          );
+                        },
+                        child: _buildContentListItem(item),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          } else {
+            return const Center(child: Text('暂无数据'));
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildDiscoveryContent() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.explore, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text('发现功能即将上线', style: TextStyle(fontSize: 18)),
+          const SizedBox(height: 8),
+          Text('敬请期待', style: TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildContentListItem(ContentItem item) {
     Widget contentWidget;
+    final favoritesProvider = Provider.of<FavoritesProvider>(context);
+    final isFavorite = favoritesProvider.isFavorite(item.contentId);
 
     // For main daily illustration
     if (item.category == '0') {
-      contentWidget = _buildDailyItem(item);
+      contentWidget = _buildDailyItem(item, isFavorite);
     }
     // Article
     else if (item.category == '1') {
-      contentWidget = _buildArticleItem(item);
+      contentWidget = _buildArticleItem(item, isFavorite);
     }
     // Question
     else if (item.category == '3') {
-      contentWidget = _buildQuestionItem(item);
+      contentWidget = _buildQuestionItem(item, isFavorite);
     }
     // Radio
     else if (item.category == '8') {
-      contentWidget = _buildRadioItem(item);
+      contentWidget = _buildRadioItem(item, isFavorite);
     }
     // Default case
     else {
@@ -313,10 +364,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildDailyItem(ContentItem item) {
+  Widget _buildDailyItem(ContentItem item, bool isFavorite) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -364,7 +415,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
 
-        // Like button
+        // Like and favorite buttons
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
@@ -376,6 +427,14 @@ class _HomePageState extends State<HomePage> {
                 style: const TextStyle(color: Colors.grey),
               ),
               const Spacer(),
+              GestureDetector(
+                onTap: () => _toggleFavorite(context, item),
+                child: Icon(
+                  isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                  color: isFavorite ? Colors.blue : Colors.grey,
+                ),
+              ),
+              const SizedBox(width: 16),
               const Icon(Icons.share, color: Colors.grey),
             ],
           ),
@@ -426,7 +485,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Article list item
-  Widget _buildArticleItem(ContentItem item) {
+  Widget _buildArticleItem(ContentItem item, bool isFavorite) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -446,6 +505,13 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           contentPadding: const EdgeInsets.all(16),
+          trailing: GestureDetector(
+            onTap: () => _toggleFavorite(context, item),
+            child: Icon(
+              isFavorite ? Icons.bookmark : Icons.bookmark_border,
+              color: isFavorite ? Colors.blue : Colors.grey,
+            ),
+          ),
         ),
         if (item.imgUrl.isNotEmpty)
           _cachedNetworkImage(item.imgUrl, height: 200),
@@ -454,7 +520,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Question list item
-  Widget _buildQuestionItem(ContentItem item) {
+  Widget _buildQuestionItem(ContentItem item, bool isFavorite) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -477,6 +543,13 @@ class _HomePageState extends State<HomePage> {
             children: [const SizedBox(height: 8), Text(item.forward)],
           ),
           contentPadding: const EdgeInsets.all(16),
+          trailing: GestureDetector(
+            onTap: () => _toggleFavorite(context, item),
+            child: Icon(
+              isFavorite ? Icons.bookmark : Icons.bookmark_border,
+              color: isFavorite ? Colors.blue : Colors.grey,
+            ),
+          ),
         ),
         if (item.imgUrl.isNotEmpty)
           _cachedNetworkImage(item.imgUrl, height: 200),
@@ -485,7 +558,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Radio list item
-  Widget _buildRadioItem(ContentItem item) {
+  Widget _buildRadioItem(ContentItem item, bool isFavorite) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -501,12 +574,42 @@ class _HomePageState extends State<HomePage> {
               Text('ONE收音机 | ${item.volume}'),
             ],
           ),
-          trailing: const Icon(Icons.play_circle_filled, size: 36),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () => _toggleFavorite(context, item),
+                child: Icon(
+                  isFavorite ? Icons.bookmark : Icons.bookmark_border,
+                  color: isFavorite ? Colors.blue : Colors.grey,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.play_circle_filled, size: 36),
+            ],
+          ),
           contentPadding: const EdgeInsets.all(16),
         ),
         if (item.imgUrl.isNotEmpty)
           _cachedNetworkImage(item.imgUrl, height: 200),
       ],
+    );
+  }
+
+  void _toggleFavorite(BuildContext context, ContentItem item) {
+    final favoritesProvider = Provider.of<FavoritesProvider>(
+      context,
+      listen: false,
+    );
+    final isFavorite = favoritesProvider.isFavorite(item.contentId);
+
+    favoritesProvider.toggleFavorite(item);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isFavorite ? '已移除收藏' : '已加入收藏'),
+        duration: const Duration(seconds: 1),
+      ),
     );
   }
 }
