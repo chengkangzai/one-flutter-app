@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/content_item.dart';
 import 'package:flutter_application_1/models/related_article.dart';
+import 'package:flutter_application_1/services/audio_service.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
@@ -265,7 +266,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
     // Default
     else {
       return SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0), 
         child: Text(
           'Content not available for this type',
           style: TextStyle(fontSize: 16),
@@ -276,6 +277,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
 
   Widget _buildDailyContent() {
     return SingleChildScrollView(
+      padding: EdgeInsets.only(bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -341,6 +343,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
 
   Widget _buildArticleContent() {
     return SingleChildScrollView(
+      padding: EdgeInsets.only(bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -471,6 +474,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
             : widget.item.author.userName;
 
     return SingleChildScrollView(
+      
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -637,7 +641,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
     final authorData = _radioData.isNotEmpty ? _radioData['author'] : null;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.only(bottom: 64),
+      padding: EdgeInsets.only(bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -676,9 +680,8 @@ class _DailyContentPageState extends State<DailyContentPage> {
                 // Audio player
                 if (audioUrl.isNotEmpty)
                   AudioPlayerWidget(
-                    audioUrl: audioUrl,
-                    title: widget.item.title,
-                    subtitle: anchor.isNotEmpty ? '主播: $anchor' : '',
+                    audioService: AudioService(),
+                    key: Key(audioUrl), // Ensure unique key for each instance
                   )
                 else
                   Container(

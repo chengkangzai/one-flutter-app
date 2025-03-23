@@ -1,12 +1,15 @@
-// lib/services/api_service.dart
 import 'dart:convert';
 import 'dart:io';
 // ignore: depend_on_referenced_packages
 import 'package:http/http.dart' as http;
 import '../models/one_response.dart';
+import 'cache_service.dart';
 
 class FeedService {
   final String baseUrl = 'http://v3.wufazhuce.com:8000/api';
+  final CacheService _cacheService = CacheService(
+    cacheExpirationHours: 4,
+  ); // 4-hour cache
 
   // Headers from your curl command
   final Map<String, String> headers = {
@@ -17,8 +20,23 @@ class FeedService {
     'Connection': 'keep-alive',
   };
 
-  Future<OneResponse> fetchOneData({String location = 'Petaling Jaya'}) async {
+  Future<OneResponse> fetchOneData({
+    String location = 'Petaling Jaya',
+    bool forceRefresh = false,
+  }) async {
     final encodedLocation = Uri.encodeComponent(location);
+    final cacheKey = 'one_data_$encodedLocation';
+
+    // Try to get data from cache if not forcing refresh
+    if (!forceRefresh) {
+      final cachedData = await _cacheService.getCachedData(cacheKey);
+      if (cachedData != null) {
+        print('Returning cached ONE data for $location');
+        return OneResponse.fromJson(cachedData);
+      }
+    }
+
+    // If no cache or force refresh, fetch from network
     final url = '$baseUrl/channel/one/0/$encodedLocation';
 
     try {
@@ -27,6 +45,10 @@ class FeedService {
       if (response.statusCode == 200) {
         try {
           final decodedData = json.decode(response.body);
+
+          // Cache the response data
+          await _cacheService.cacheData(cacheKey, decodedData);
+
           return OneResponse.fromJson(decodedData);
         } catch (e) {
           print('JSON parsing error: $e');
@@ -52,6 +74,18 @@ class FeedService {
       print('Network error: $e');
       throw Exception('Network error: $e');
     }
+  }
+
+  // Clear feed cache
+  Future<bool> clearCache(String location) async {
+    final encodedLocation = Uri.encodeComponent(location);
+    final cacheKey = 'one_data_$encodedLocation';
+    return await _cacheService.clearCache(cacheKey);
+  }
+
+  // Clear all feed caches
+  Future<bool> clearAllCache() async {
+    return await _cacheService.clearAllCache();
   }
 }
 

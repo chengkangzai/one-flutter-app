@@ -1,9 +1,19 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/providers/cache_provider.dart';
+import 'package:flutter_application_1/screens/cache_screen.dart';
+import 'package:provider/provider.dart';
 import 'screens/home_page.dart';
+import 'screens/settings_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => CacheProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -22,7 +32,12 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const HomePage(),
+      routes: {
+        '/': (context) => const HomePage(),
+        '/settings': (context) => const SettingsPage(),
+        '/settings/cache': (context) => const CacheSettingsScreen(),
+      },
+      initialRoute: '/',
       debugShowCheckedModeBanner: false,
     );
   }
