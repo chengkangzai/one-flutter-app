@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/content_item.dart';
 import 'package:intl/intl.dart';
 import '../models/one_response.dart';
-import '../services/api_service.dart';
+import '../services/feed_service.dart';
 import 'daily_content_page.dart';
 
 class HomePage extends StatefulWidget {
