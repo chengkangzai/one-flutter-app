@@ -14,7 +14,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final ApiService _apiService = ApiService();
+  final FeedService _apiService = FeedService();
   late Future<OneResponse> _oneResponseFuture;
   String _errorDetails = '';
 
@@ -46,10 +46,7 @@ class _HomePageState extends State<HomePage> {
         foregroundColor: Colors.black,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchData,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchData),
         ],
       ),
       body: FutureBuilder<OneResponse>(
@@ -66,7 +63,10 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text(
                       'Error loading data',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text('${snapshot.error}'),
@@ -92,7 +92,7 @@ class _HomePageState extends State<HomePage> {
             );
           } else if (snapshot.hasData) {
             final data = snapshot.data!.data;
-            
+
             // Format the date for display
             final dateStr = data.date;
             DateTime dateTime = DateTime.now();
@@ -102,11 +102,11 @@ class _HomePageState extends State<HomePage> {
               // Use current date if parsing fails
               print('Date parsing error: $e for date: $dateStr');
             }
-            
+
             final day = dateTime.day.toString();
             final month = DateFormat('MMM').format(dateTime);
             final year = dateTime.year.toString();
-            
+
             return Column(
               children: [
                 // Date display
@@ -138,7 +138,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-                
+
                 // Content list
                 Expanded(
                   child: ListView.builder(
@@ -150,7 +150,8 @@ class _HomePageState extends State<HomePage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => DailyContentPage(item: item),
+                              builder:
+                                  (context) => DailyContentPage(item: item),
                             ),
                           );
                         },
@@ -168,22 +169,10 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: '首页',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view),
-            label: '发现',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.collections),
-            label: '收藏夹',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: '我的',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: '发现'),
+          BottomNavigationBarItem(icon: Icon(Icons.collections), label: '收藏夹'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
         ],
         currentIndex: 0,
         selectedItemColor: Colors.black,
@@ -200,19 +189,19 @@ class _HomePageState extends State<HomePage> {
     // For main daily illustration
     if (item.category == '0') {
       contentWidget = _buildDailyItem(item);
-    } 
+    }
     // Article
     else if (item.category == '1') {
       contentWidget = _buildArticleItem(item);
-    } 
+    }
     // Question
     else if (item.category == '3') {
       contentWidget = _buildQuestionItem(item);
-    } 
+    }
     // Radio
     else if (item.category == '8') {
       contentWidget = _buildRadioItem(item);
-    } 
+    }
     // Default case
     else {
       contentWidget = ListTile(
@@ -247,7 +236,7 @@ class _HomePageState extends State<HomePage> {
             },
           ),
         ),
-        
+
         // Attribution and quote
         Padding(
           padding: const EdgeInsets.all(16.0),
@@ -278,17 +267,14 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Text(
                     '文字 · 图片 · 歌曲 · 电影 · 谈话',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        
+
         // Like button
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -296,10 +282,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               const Icon(Icons.favorite_border, color: Colors.grey),
               const SizedBox(width: 8),
-              Text(
-                '${item.likeCount}',
-                style: TextStyle(color: Colors.grey),
-              ),
+              Text('${item.likeCount}', style: TextStyle(color: Colors.grey)),
               const Spacer(),
               const Icon(Icons.share, color: Colors.grey),
             ],
@@ -358,10 +341,7 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Text(
               '— ${item.tagList.first.title} —',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ),
@@ -372,10 +352,7 @@ class _HomePageState extends State<HomePage> {
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              Text(item.forward),
-            ],
+            children: [const SizedBox(height: 8), Text(item.forward)],
           ),
           contentPadding: const EdgeInsets.all(16),
         ),

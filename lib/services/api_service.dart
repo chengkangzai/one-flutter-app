@@ -5,9 +5,9 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../models/one_response.dart';
 
-class ApiService {
+class FeedService {
   final String baseUrl = 'http://v3.wufazhuce.com:8000/api';
-  
+
   // Headers from your curl command
   final Map<String, String> headers = {
     'Host': 'v3.wufazhuce.com:8000',
@@ -20,22 +20,26 @@ class ApiService {
   Future<OneResponse> fetchOneData({String location = 'Petaling Jaya'}) async {
     final encodedLocation = Uri.encodeComponent(location);
     final url = '$baseUrl/channel/one/0/$encodedLocation';
-    
+
     try {
       final response = await http.get(Uri.parse(url), headers: headers);
-      
+
       if (response.statusCode == 200) {
         try {
           final decodedData = json.decode(response.body);
           return OneResponse.fromJson(decodedData);
         } catch (e) {
           print('JSON parsing error: $e');
-          print('Response body: ${response.body.substring(0, min(500, response.body.length))}');
+          print(
+            'Response body: ${response.body.substring(0, min(500, response.body.length))}',
+          );
           throw Exception('Failed to parse response data: $e');
         }
       } else {
         print('HTTP error: ${response.statusCode}');
-        print('Response body: ${response.body.substring(0, min(500, response.body.length))}');
+        print(
+          'Response body: ${response.body.substring(0, min(500, response.body.length))}',
+        );
         throw Exception('Failed to load data: ${response.statusCode}');
       }
     } on SocketException {
