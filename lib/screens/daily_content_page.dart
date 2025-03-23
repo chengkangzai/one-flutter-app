@@ -8,8 +8,6 @@ import 'package:flutter_application_1/providers/theme_provider.dart';
 import 'package:flutter_application_1/services/audio_service.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:intl/intl.dart';
-import '../models/one_response.dart';
 import '../services/article_service.dart';
 import '../widgets/audio_player_widget.dart';
 
@@ -374,17 +372,19 @@ class _DailyContentPageState extends State<DailyContentPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (widget.item.imgUrl.isNotEmpty)
-            Image.network(
-              widget.item.imgUrl,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 200,
-                  color: isDarkMode ? Colors.grey[900] : Colors.grey[300],
-                  child: const Center(child: Text('Image not available')),
-                );
-              },
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                widget.item.imgUrl,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: isDarkMode ? Colors.grey[900] : Colors.grey[300],
+                    child: const Center(child: Text('Image not available')),
+                  );
+                },
+              ),
             ),
 
           Padding(
@@ -570,19 +570,22 @@ class _DailyContentPageState extends State<DailyContentPage> {
                   ..._images.map(
                     (imageSrc) => Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Image.network(
-                        imageSrc,
-                        width: double.infinity,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 200,
-                            color:
-                                isDarkMode
-                                    ? Colors.grey[900]
-                                    : Colors.grey[200],
-                            child: Center(child: Text('Image not available')),
-                          );
-                        },
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Image.network(
+                          imageSrc,
+                          width: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 200,
+                              color:
+                                  isDarkMode
+                                      ? Colors.grey[900]
+                                      : Colors.grey[200],
+                              child: Center(child: Text('Image not available')),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -865,7 +868,6 @@ class _DailyContentPageState extends State<DailyContentPage> {
       );
     }
 
-    // Additionally, add a debug print in the onTap handler to see what's happening
     void onTapRelatedArticle(RelatedArticle article) {
       // Create a ContentItem from the RelatedArticle
       final contentItem = relatedToContentItem(article);
