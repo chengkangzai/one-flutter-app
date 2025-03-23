@@ -7,7 +7,7 @@ import 'package:flutter_application_1/screens/daily_content_page.dart';
 import 'package:provider/provider.dart';
 
 class FavoritesPage extends StatelessWidget {
-  const FavoritesPage({Key? key}) : super(key: key);
+  const FavoritesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -275,8 +275,8 @@ class FavoritesPage extends StatelessWidget {
                     context,
                   ).showSnackBar(const SnackBar(content: Text('收藏夹已清空')));
                 },
-                child: const Text('确定'),
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('确定'),
               ),
             ],
           ),

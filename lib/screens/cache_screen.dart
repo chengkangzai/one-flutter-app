@@ -5,7 +5,7 @@ import 'package:flutter_application_1/services/cache_manager.dart';
 import 'package:provider/provider.dart';
 
 class CacheSettingsScreen extends StatefulWidget {
-  const CacheSettingsScreen({Key? key}) : super(key: key);
+  const CacheSettingsScreen({super.key});
 
   @override
   _CacheSettingsScreenState createState() => _CacheSettingsScreenState();

@@ -15,7 +15,7 @@ import '../widgets/audio_player_widget.dart';
 class DailyContentPage extends StatefulWidget {
   final ContentItem item;
 
-  const DailyContentPage({Key? key, required this.item}) : super(key: key);
+  const DailyContentPage({super.key, required this.item});
 
   @override
   State<DailyContentPage> createState() => _DailyContentPageState();
@@ -414,7 +414,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
                           ),
                         ),
                       )
-                      .toList()
+                      
                 else
                   Text(
                     widget.item.forward,
@@ -590,7 +590,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
                           ),
                         ),
                       )
-                      .toList(),
+                      ,
 
                 const SizedBox(height: 24),
 
@@ -778,7 +778,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
                           ),
                         ),
                       )
-                      .toList()
+                      
                 else
                   Text(
                     widget.item.forward,
@@ -835,7 +835,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+            SizedBox(
               width: 50,
               child: Center(
                 child: Text(

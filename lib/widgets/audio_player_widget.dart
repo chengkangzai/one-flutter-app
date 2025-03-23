@@ -5,7 +5,7 @@ import 'package:flutter_application_1/services/audio_service.dart';
 class AudioPlayerWidget extends StatelessWidget {
   final AudioService audioService;
 
-  const AudioPlayerWidget({Key? key, required this.audioService}) : super(key: key);
+  const AudioPlayerWidget({super.key, required this.audioService});
 
   @override
   Widget build(BuildContext context) {

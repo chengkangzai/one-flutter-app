@@ -5,7 +5,7 @@ import 'package:flutter_application_1/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {

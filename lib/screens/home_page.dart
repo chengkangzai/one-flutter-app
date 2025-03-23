@@ -12,7 +12,7 @@ import '../services/feed_service.dart';
 import 'daily_content_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -42,7 +42,7 @@ class _HomePageState extends State<HomePage> {
 
       // Use offline mode setting if not explicitly forcing refresh
       final shouldForceRefresh =
-          forceRefresh ? true : !(await cacheProvider.offlineModeEnabled);
+          forceRefresh ? true : !(cacheProvider.offlineModeEnabled);
 
       setState(() {
         _oneResponseFuture = _apiService
