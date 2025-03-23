@@ -1,5 +1,6 @@
 // lib/screens/daily_content_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/models/author.dart';
 import 'package:flutter_application_1/models/content_item.dart';
 import 'package:flutter_application_1/models/related_article.dart';
 import 'package:flutter_application_1/providers/favorites_provider.dart';
@@ -404,17 +405,15 @@ class _DailyContentPageState extends State<DailyContentPage> {
 
                 // Simplified article content - display paragraphs as Text widgets
                 if (_paragraphs.isNotEmpty)
-                  ..._paragraphs
-                      .map(
-                        (paragraph) => Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: Text(
-                            paragraph,
-                            style: TextStyle(fontSize: 16, height: 1.6),
-                          ),
-                        ),
-                      )
-                      
+                  ..._paragraphs.map(
+                    (paragraph) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Text(
+                        paragraph,
+                        style: TextStyle(fontSize: 16, height: 1.6),
+                      ),
+                    ),
+                  )
                 else
                   Text(
                     widget.item.forward,
@@ -568,29 +567,25 @@ class _DailyContentPageState extends State<DailyContentPage> {
 
                 // Display images from the question content
                 if (_images.isNotEmpty)
-                  ..._images
-                      .map(
-                        (imageSrc) => Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: Image.network(
-                            imageSrc,
-                            width: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 200,
-                                color:
-                                    isDarkMode
-                                        ? Colors.grey[900]
-                                        : Colors.grey[200],
-                                child: Center(
-                                  child: Text('Image not available'),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      )
-                      ,
+                  ..._images.map(
+                    (imageSrc) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Image.network(
+                        imageSrc,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 200,
+                            color:
+                                isDarkMode
+                                    ? Colors.grey[900]
+                                    : Colors.grey[200],
+                            child: Center(child: Text('Image not available')),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
 
                 const SizedBox(height: 24),
 
@@ -768,17 +763,15 @@ class _DailyContentPageState extends State<DailyContentPage> {
 
                 // Description
                 if (_paragraphs.isNotEmpty)
-                  ..._paragraphs
-                      .map(
-                        (paragraph) => Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: Text(
-                            paragraph,
-                            style: TextStyle(fontSize: 16, height: 1.6),
-                          ),
-                        ),
-                      )
-                      
+                  ..._paragraphs.map(
+                    (paragraph) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Text(
+                        paragraph,
+                        style: TextStyle(fontSize: 16, height: 1.6),
+                      ),
+                    ),
+                  )
                 else
                   Text(
                     widget.item.forward,
@@ -806,36 +799,99 @@ class _DailyContentPageState extends State<DailyContentPage> {
     );
   }
 
+  // lib/screens/daily_content_page.dart - updated _buildRelatedArticleItem method
+
   Widget _buildRelatedArticleItem(
     RelatedArticle article, {
     bool isQuestion = false,
     bool isRadio = false,
   }) {
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
     String contentType = '阅读'; // Default to article
     if (isQuestion) contentType = '问答';
     if (isRadio) contentType = '电台';
 
+    // Function to convert RelatedArticle to ContentItem
+    ContentItem relatedToContentItem(RelatedArticle article) {
+      // Create an Author instance from the first author in the list (if available)
+      Author author =
+          article.authorList.isNotEmpty
+              ? article.authorList.first
+              : Author(
+                userId: '',
+                userName: article.getAuthorsText(),
+                desc: '',
+                wbName: '',
+                isSettled: '',
+                settledType: '',
+                summary: '',
+                fansTotal: '',
+                webUrl: '',
+              );
+
+      // Convert the category to string
+      String categoryStr = article.category.toString();
+
+      // Create a basic ContentItem from the related article data
+      // The key fix is to ensure the imgUrl is properly set from the cover field
+      // and properly formatted with http://
+      String imageUrl = article.cover;
+
+      // If the URL doesn't start with http, add it
+      if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+        imageUrl = 'http://' + imageUrl;
+      }
+
+      return ContentItem(
+        id: article.contentId,
+        category: categoryStr,
+        displayCategory: article.category,
+        itemId: article.contentId,
+        title: article.title,
+        forward: '', // No forward text available in RelatedArticle
+        imgUrl: imageUrl,
+        likeCount: 0, // No like count available in RelatedArticle
+        postDate: '',
+        lastUpdateDate: '',
+        author: author,
+        contentId: article.contentId,
+        contentType: categoryStr,
+        shareUrl: '',
+        shareInfo: {},
+        tagList: [],
+        volume: '',
+        picInfo: '',
+        wordsInfo: '',
+        textAuthorInfo: null,
+      );
+    }
+
+    // Additionally, add a debug print in the onTap handler to see what's happening
+    void onTapRelatedArticle(RelatedArticle article) {
+      // Create a ContentItem from the RelatedArticle
+      final contentItem = relatedToContentItem(article);
+
+      // Navigate to the article detail page
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DailyContentPage(item: contentItem),
+        ),
+      );
+    }
+
+    ;
+
     return InkWell(
-      onTap: () {
-        // Here we would navigate to the content detail page
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Opening: ${article.title}')));
-      },
+      onTap: () => onTapRelatedArticle(article),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
-            ),
-          ),
+          border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
+            Container(
               width: 50,
               child: Center(
                 child: Text(
