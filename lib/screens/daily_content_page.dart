@@ -637,6 +637,7 @@ class _DailyContentPageState extends State<DailyContentPage> {
     final authorData = _radioData.isNotEmpty ? _radioData['author'] : null;
 
     return SingleChildScrollView(
+      padding: EdgeInsets.only(bottom: 64),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
